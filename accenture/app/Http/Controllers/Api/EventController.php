@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Models\Event;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Notifications\EventCreated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreEventRequest;
 use App\Http\Requests\UpdateEventRequest;
+use Illuminate\Support\Facades\Notification;
 
 class EventController extends Controller
 {
@@ -38,12 +41,17 @@ class EventController extends Controller
 
     public function store(StoreEventRequest $request)
     {
-        $data = $request->validated();    
-        $event = Event::create($data);
-        return response()->json([
-            'data' => $event,
-            'success' => true
-        ], 201);
+        DB::transaction(function() use ($request){
+            $data = $request->validated();    
+            $event = Event::create($data);
+
+            Notification::route('mail', 'admin@test.com')->notify(new EventCreated());
+
+            return response()->json([
+                'data' => $event,
+                'success' => true
+            ], 201);
+        });
     }
 
     public function update(Event $event ,UpdateEventRequest $request)
